@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Compilation') {
+            steps {
+                sh 'gcc -c tri_bulles.c -o tri_bulles.o'
+                sh 'gcc -c test_tri.c -o test_tri.o'
+                sh 'gcc tri_bulles.o test_tri.o -o exec_tests'
+            }
+        }
+        stage('Execution') {
+            steps {
+                sh './exec_tests'
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Build et tests terminés avec succès.'
+        }
+        failure {
+            echo 'Échec du build ou des tests.'
+        }
+    }
+    
+}

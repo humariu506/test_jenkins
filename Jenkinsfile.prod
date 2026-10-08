@@ -1,0 +1,31 @@
+pipeline{
+    agent any
+
+    environment {
+        TARGET_DIR = "/var/www/app_tri"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Compilation Release') {
+            steps {
+                sh 'gcc -c tri_bulles.c -o tri_bulles'
+            }
+        }
+        stage('Déploiement/Installation') {
+            steps {
+                sh "mkdir -p ${TARGET_DIR}"
+                sh "tri_bulles ${TARGET_DIR}/"
+                sh "chmod +x ${TARGET_DIR}/tri_bulles"
+            }
+        }
+    }
+    post {
+        success {
+            echo 'Déploiement en production terminés avec succès.'
+        }
+    }
+}
