@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-extern void tri_bulles(int tab[], int taille);
+#include "tri.h"
 
 int main() {
     int tab[] = {5, 2, 8, 1, 3};

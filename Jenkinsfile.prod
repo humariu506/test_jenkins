@@ -1,8 +1,9 @@
-pipeline{
+pipeline {
     agent any
 
     environment {
-        TARGET_DIR = "/var/www/app_tri"
+        // L'utilisateur Jenkins doit avoir les droits d'écriture sur ce dossier
+        INSTALL_DIR = "/var/www/app_tri"
     }
     stages {
         stage('Checkout') {
@@ -12,20 +13,45 @@ pipeline{
         }
         stage('Compilation Release') {
             steps {
-                sh 'gcc -c tri_bulles.c -o tri_bulles'
+                sh 'make distclean'
+                sh 'make'
             }
         }
-        stage('Déploiement/Installation') {
+        stage('Tests') {
             steps {
-                sh "mkdir -p ${TARGET_DIR}"
-                sh "tri_bulles ${TARGET_DIR}/"
-                sh "chmod +x ${TARGET_DIR}/tri_bulles"
+                sh 'make test'
+            }
+        }
+        stage('Nettoyage') {
+            steps {
+                // Supprime .o et binaire de test, conserve l'exécutable tri_bulles
+                sh 'make clean'
+            }
+        }
+        stage('Strip') {
+            steps {
+                sh 'ls -l tri_bulles && file tri_bulles'
+                sh 'make strip'
+                sh 'ls -l tri_bulles && file tri_bulles'
+                sh './tri_bulles 5 2 8 1 3'
+            }
+        }
+        stage('Installation') {
+            steps {
+                sh "make install PREFIX=${INSTALL_DIR}"
+                sh "ls -l ${INSTALL_DIR}/bin/tri_bulles"
             }
         }
     }
     post {
+        always {
+            cleanWs()
+        }
         success {
-            echo 'Déploiement en production terminés avec succès.'
+            echo "Déploiement en production terminé : ${INSTALL_DIR}/bin/tri_bulles"
+        }
+        failure {
+            echo 'Échec du déploiement en production.'
         }
     }
 }

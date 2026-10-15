@@ -1,0 +1,10 @@
+install/
+*.o
+exec_tests
+/tri_bulles
+gmon.out
+callgrind.out.*
+massif.out.*
+valgrind-*.log
+rapports/
+profilage_et_strip.txt

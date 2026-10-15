@@ -1,0 +1,79 @@
+pipeline {
+    agent any
+
+    // Prérequis sur l'agent : gcc, make, valgrind, libc6-dbg (Debian/Ubuntu)
+    environment {
+        N_PROFIL = "5000"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Vérification outils') {
+            steps {
+                sh 'gcc --version | head -1'
+                sh 'valgrind --version'
+                sh 'gprof --version | head -1'
+            }
+        }
+        stage('Compilation Debug') {
+            steps {
+                // -g : symboles pour que les rapports pointent sur les lignes du code
+                // -O0 : pas d'optimisation, le profil correspond au code source
+                sh 'make debug'
+            }
+        }
+        stage('Tests') {
+            steps {
+                sh 'make test'
+            }
+        }
+        stage('Valgrind Memcheck') {
+            steps {
+                // Échoue (exit 1) si une erreur ou une fuite mémoire est détectée
+                sh 'make memcheck'
+                sh 'grep -E "ERROR SUMMARY|in use at exit|total heap usage" rapports/memcheck_*.log'
+            }
+        }
+        stage('Valgrind Callgrind') {
+            steps {
+                sh "make callgrind N_PROFIL=${N_PROFIL}"
+                sh 'head -30 rapports/callgrind.txt'
+            }
+        }
+        stage('Valgrind Massif') {
+            steps {
+                sh "make massif N_PROFIL=${N_PROFIL}"
+                sh 'head -40 rapports/massif.txt'
+            }
+        }
+        stage('Gprof') {
+            steps {
+                sh "make gprof"
+                sh 'head -15 rapports/gprof.txt'
+            }
+        }
+        stage('Benchmark Release') {
+            steps {
+                // Mesure le temps réel du binaire tel qu'il partira en production
+                sh 'rm -f *.o tri_bulles && make'
+                sh 'bash -c "for i in 1 2 3; do time ./tri_bulles -r 20000; done" 2>&1 | tee rapports/benchmark.txt'
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'rapports/**', allowEmptyArchive: true
+            cleanWs()
+        }
+        success {
+            echo 'Pré-production : tests et profilage OK, rapports archivés.'
+        }
+        failure {
+            echo 'Pré-production : échec (voir rapports/memcheck_*.log si Memcheck).'
+        }
+    }
+}

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "tri.h"
 
 void tri_bulles(int tab[], int taille) {
     for (int i = 0; i < taille - 1; i++) {
