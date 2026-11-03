@@ -8,3 +8,5 @@ massif.out.*
 valgrind-*.log
 rapports/
 profilage_et_strip.txt
+installation_serveur_git.txt
+serveur_git_rapport.txt
