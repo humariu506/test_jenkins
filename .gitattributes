@@ -1,0 +1,7 @@
+# Scripts exécutés sous Linux : jamais de fins de ligne CRLF
+*.sh text eol=lf
+serveur_git/post-receive text eol=lf
+Jenkinsfile.* text eol=lf
+Makefile text eol=lf
+installation/* text eol=lf
+*.pptx binary

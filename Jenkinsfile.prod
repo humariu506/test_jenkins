@@ -5,6 +5,12 @@ pipeline {
         // L'utilisateur Jenkins doit avoir les droits d'écriture sur ce dossier
         INSTALL_DIR = "/var/www/app_tri"
     }
+
+    // Se lance seul quand le code change sur GitHub (scrutation toutes les 5 min).
+    // Avec un Jenkins joignable depuis Internet : githubPush() + webhook GitHub.
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
     stages {
         stage('Checkout') {
             steps {

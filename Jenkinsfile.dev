@@ -1,6 +1,16 @@
 pipeline {
     agent any
 
+    // Même Jenkinsfile pour deux jobs :
+    //  - tri-dev        : dépôt GitHub, scruté toutes les 5 min (Jenkins local
+    //                     injoignable par un webhook GitHub)
+    //  - tri-dev-local  : serveur git local, lancé à chaque push par le hook
+    //                     post-receive en SSH (voir serveur_git/README.md).
+    //                     La scrutation sert aussi à la méthode "curl" du hook.
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
+
     stages {
         stage('Checkout') {
             steps {

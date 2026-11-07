@@ -1,0 +1,55 @@
+#!/bin/bash
+# Hook post-receive du dépôt nu /srv/git/tri_bulles.git
+# Exécuté par l'utilisateur "git" après chaque push : déclenche le pipeline Dev
+# de Jenkins directement en SSH (CLI SSH intégrée à Jenkins), sans service tiers.
+#
+# Les valeurs ci-dessous peuvent être surchargées dans hooks/jenkins.env
+
+JENKINS_HOST="localhost"
+JENKINS_SSH_PORT="2222"        # Manage Jenkins > Security > SSH Server
+JENKINS_USER="git-hook"        # utilisateur Jenkins qui porte la clé publique de "git"
+JENKINS_JOB="tri-dev-local"
+BRANCHE="main"
+# ssh  : ssh -p 2222 git-hook@localhost build tri-dev-local  (par défaut)
+# curl : notification HTTP du plugin Git (le job doit avoir "Scrutation de l'outil
+#        de gestion de version" activée, ce que fait le pollSCM du Jenkinsfile)
+METHODE="ssh"
+JENKINS_URL="http://localhost:8080"
+DEPOT_URL="git@localhost:/srv/git/tri_bulles.git"
+
+CONF="$(dirname "$0")/jenkins.env"
+[ -f "$CONF" ] && . "$CONF"
+
+declencher=0
+while read -r ancien nouveau ref; do
+    # Un push qui supprime la branche ne doit pas lancer de build
+    if [ "$ref" = "refs/heads/$BRANCHE" ] && [ "$nouveau" != "0000000000000000000000000000000000000000" ]; then
+        declencher=1
+        echo "Push sur $BRANCHE : ${ancien:0:7} -> ${nouveau:0:7}"
+    fi
+done
+
+if [ "$declencher" -eq 0 ]; then
+    echo "Aucun push sur $BRANCHE, pipeline non déclenché."
+    exit 0
+fi
+
+echo "Déclenchement du job Jenkins '$JENKINS_JOB' (méthode $METHODE)..."
+
+if [ "$METHODE" = "curl" ]; then
+    curl -fsS "$JENKINS_URL/git/notifyCommit?url=$DEPOT_URL&branches=$BRANCHE"
+    statut=$?
+else
+    ssh -p "$JENKINS_SSH_PORT" \
+        -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+        "$JENKINS_USER@$JENKINS_HOST" build "$JENKINS_JOB"
+    statut=$?
+fi
+
+# Le push est déjà enregistré : un échec ici n'annule rien, on prévient seulement
+if [ "$statut" -eq 0 ]; then
+    echo "Pipeline '$JENKINS_JOB' lancé."
+else
+    echo "ATTENTION : impossible de joindre Jenkins (code $statut). Voir serveur_git/README.md"
+fi
+exit 0

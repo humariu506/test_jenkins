@@ -6,6 +6,12 @@ pipeline {
         N_PROFIL = "5000"
     }
 
+    // Se lance seul quand le code change sur GitHub (scrutation toutes les 5 min).
+    // Avec un Jenkins joignable depuis Internet : githubPush() + webhook GitHub.
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
+
     stages {
         stage('Checkout') {
             steps {
