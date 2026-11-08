@@ -7,10 +7,12 @@ déclenchés par GitHub et par notre propre serveur git, joint directement en SS
 Le tronc commun et les deux options du sujet sont réalisés.
 
 ```
-poste de dev ── git push ──┬──> GitHub ──(scrutation 5 min)──> tri-dev, tri-preprod, tri-prod
+poste de dev ── git push ──┬──> GitHub ──(scrutation 5 min)──> tri-dev ─(vert)─> tri-preprod ─(vert)─> tri-prod ──> /var/www/app_tri
                            └──> serveur git local ──(hook en SSH)──> tri-dev-local
-                                                       tri-prod ──> /var/www/app_tri
 ```
+
+Les pipelines sont chaînés : chacun ne lance le suivant que s'il est vert, et les trois
+travaillent sur le même commit, celui que `tri-dev` a testé.
 
 ## Démarrage rapide sur un nouveau PC
 
@@ -77,7 +79,8 @@ git remote -v    # deux lignes (push) attendues
 Ensuite, chaque `git push` sur `main` :
 
 - lance tout de suite `tri-dev-local` : le serveur répond `remote: Pipeline 'tri-dev-local' lancé.` ;
-- lance `tri-dev`, `tri-preprod` et `tri-prod` dans les 5 minutes (scrutation de GitHub).
+- lance `tri-dev` dans les 5 minutes (scrutation de GitHub). S'il est vert, il lance
+  `tri-preprod`, qui lance `tri-prod` s'il est vert à son tour.
 
 Pour pousser sur GitHub, le compte doit être collaborateur du dépôt.
 

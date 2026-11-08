@@ -110,7 +110,8 @@ git remote -v
 Ensuite, un simple `git push` met à jour les deux dépôts :
 
 - le serveur local répond aussitôt `remote: Pipeline 'tri-dev-local' lancé.` ;
-- `tri-dev`, `tri-preprod` et `tri-prod` partent dans les 5 minutes (scrutation GitHub).
+- `tri-dev` part dans les 5 minutes (scrutation GitHub), puis `tri-preprod` et `tri-prod`
+  s'enchaînent si chaque étape est verte.
 
 ## Méthode alternative : notification HTTP
 
