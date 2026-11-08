@@ -19,7 +19,7 @@ URL=http://localhost:8080
 DOSSIER="$(cd "$(dirname "$0")" && pwd)"
 RACINE="$(dirname "$DOSSIER")"
 CLI_JAR=/var/lib/jenkins-cli.jar
-PLUGINS="workflow-aggregator git credentials ssh-credentials ws-cleanup sshd"
+PLUGINS="workflow-aggregator git credentials ssh-credentials ws-cleanup sshd pipeline-graph-view"
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "À lancer avec sudo." >&2
