@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     // Même Jenkinsfile pour deux jobs :
-    //  - tri-dev        : dépôt GitHub, scruté toutes les 5 min (Jenkins local
-    //                     injoignable par un webhook GitHub)
+    //  - tri-dev        : dépôt GitHub, scruté toutes les 5 min. Tête de la chaîne
+    //                     Dev -> Pré-prod -> Prod : s'il est vert, il lance tri-preprod.
     //  - tri-dev-local  : serveur git local, lancé à chaque push par le hook
     //                     post-receive en SSH (voir serveur_git/README.md).
     //                     La scrutation sert aussi à la méthode "curl" du hook.
@@ -14,7 +14,11 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                script {
+                    // La pré-prod et la prod travailleront sur ce même commit
+                    env.COMMIT_TESTE = checkout(scm).GIT_COMMIT
+                }
+                echo "Commit testé : ${env.COMMIT_TESTE}"
             }
         }
         stage('Compilation') {
@@ -29,6 +33,14 @@ pipeline {
                 sh './exec_tests'
             }
         }
+        stage('Déclencher la pré-prod') {
+            // Seul le job GitHub enchaîne : tri-dev-local reste le test rapide de l'option 2
+            when { expression { env.JOB_NAME == 'tri-dev' } }
+            steps {
+                build job: 'tri-preprod', wait: false,
+                      parameters: [string(name: 'COMMIT', value: env.COMMIT_TESTE)]
+            }
+        }
     }
     post {
         always {
@@ -38,8 +50,7 @@ pipeline {
             echo 'Build et tests terminés avec succès.'
         }
         failure {
-            echo 'Échec du build ou des tests.'
+            echo 'Échec du build ou des tests : la pré-prod et la prod ne sont pas lancées.'
         }
     }
-    
 }

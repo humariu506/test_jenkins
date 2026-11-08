@@ -122,11 +122,13 @@ for _ in $(seq 20); do
     sleep 3
 done
 
-etape "Premier build de chaque job (enregistre aussi les déclencheurs pollSCM)"
+etape "Premier build de chaque job (enregistre le paramètre COMMIT et les déclencheurs pollSCM)"
 echo "    (pré-prod : profilage valgrind, compter quelques minutes)"
-for job in tri-dev tri-dev-local tri-preprod tri-prod; do
+# Pré-prod et prod d'abord : tri-dev leur passe le paramètre COMMIT, qu'elles doivent déjà connaître
+for job in tri-preprod tri-prod tri-dev-local tri-dev; do
     echo "    $(cli build "$job" -s 2>&1 | tail -1)"
 done
+echo "    tri-dev vert : la chaîne tri-preprod puis tri-prod continue en arrière-plan"
 
 # Le mot de passe admin reste celui du fichier ; on peut le changer ensuite dans Jenkins
 rm -f $JH/init.groovy.d/01-admin.groovy

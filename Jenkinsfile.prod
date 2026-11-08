@@ -6,15 +6,27 @@ pipeline {
         INSTALL_DIR = "/var/www/app_tri"
     }
 
-    // Se lance seul quand le code change sur GitHub (scrutation toutes les 5 min).
-    // Avec un Jenkins joignable depuis Internet : githubPush() + webhook GitHub.
-    triggers {
-        pollSCM('H/5 * * * *')
+    // Lancé par tri-preprod quand la pré-prod est verte, avec le commit analysé.
+    // Lancé à la main avec COMMIT vide : dernier commit de main.
+    parameters {
+        string(name: 'COMMIT', defaultValue: '', description: 'Commit à installer (vide : dernier commit de main)')
     }
+
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                script {
+                    def commit = checkout(scm).GIT_COMMIT
+                    if (params.COMMIT) {
+                        if (!(params.COMMIT ==~ /[0-9a-f]{7,40}/)) {
+                            error "COMMIT invalide : ${params.COMMIT}"
+                        }
+                        sh "git checkout --quiet --detach ${params.COMMIT}"
+                        commit = params.COMMIT
+                    }
+                    env.COMMIT_TESTE = commit
+                }
+                echo "Commit installé : ${env.COMMIT_TESTE}"
             }
         }
         stage('Compilation Release') {
@@ -54,10 +66,10 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Déploiement en production terminé : ${INSTALL_DIR}/bin/tri_bulles"
+            echo "Déploiement en production terminé : ${INSTALL_DIR}/bin/tri_bulles (commit ${env.COMMIT_TESTE})"
         }
         failure {
-            echo 'Échec du déploiement en production.'
+            echo 'Échec du déploiement : la production garde la version précédente.'
         }
     }
 }

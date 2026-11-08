@@ -6,16 +6,27 @@ pipeline {
         N_PROFIL = "5000"
     }
 
-    // Se lance seul quand le code change sur GitHub (scrutation toutes les 5 min).
-    // Avec un Jenkins joignable depuis Internet : githubPush() + webhook GitHub.
-    triggers {
-        pollSCM('H/5 * * * *')
+    // Lancé par tri-dev quand le Dev est vert, avec le commit que le Dev a testé.
+    // Lancé à la main avec COMMIT vide : dernier commit de main.
+    parameters {
+        string(name: 'COMMIT', defaultValue: '', description: 'Commit à analyser (vide : dernier commit de main)')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                script {
+                    def commit = checkout(scm).GIT_COMMIT
+                    if (params.COMMIT) {
+                        if (!(params.COMMIT ==~ /[0-9a-f]{7,40}/)) {
+                            error "COMMIT invalide : ${params.COMMIT}"
+                        }
+                        sh "git checkout --quiet --detach ${params.COMMIT}"
+                        commit = params.COMMIT
+                    }
+                    env.COMMIT_TESTE = commit
+                }
+                echo "Commit analysé : ${env.COMMIT_TESTE}"
             }
         }
         stage('Vérification outils') {
@@ -69,6 +80,12 @@ pipeline {
                 sh 'bash -c "for i in 1 2 3; do time ./tri_bulles -r 20000; done" 2>&1 | tee rapports/benchmark.txt'
             }
         }
+        stage('Déclencher la prod') {
+            steps {
+                build job: 'tri-prod', wait: false,
+                      parameters: [string(name: 'COMMIT', value: env.COMMIT_TESTE)]
+            }
+        }
     }
     post {
         always {
@@ -76,10 +93,10 @@ pipeline {
             cleanWs()
         }
         success {
-            echo 'Pré-production : tests et profilage OK, rapports archivés.'
+            echo 'Pré-production : tests et profilage OK, rapports archivés, prod lancée.'
         }
         failure {
-            echo 'Pré-production : échec (voir rapports/memcheck_*.log si Memcheck).'
+            echo 'Pré-production : échec, la prod n\'est pas lancée (voir rapports/memcheck_*.log si Memcheck).'
         }
     }
 }
